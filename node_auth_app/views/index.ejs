@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>HomePage</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<!-- <style>
+  body {
+    background-image: url('');
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-attachment: fixed;
+    background-position: center center;
+
+  }
+</style> -->
+
+<body>
+  <div class="container">
+    <% if (user) { %>
+      <h1>Welcome <%= user.email %>
+      </h1>
+      <!-- <p>Hello How  Are  You</p> -->
+      <header>
+        <nav>
+          <!-- <a href="#">Home</a> -->
+          <a href="home.html" >Home</a>
+          <a href="about.html">About</a>
+          <a href="contact.html">Contact</a>
+        </nav>
+      </header>
+
+      <!-- <section class="hero">
+        <h1>Welcome to My Website</h1>
+      </section> -->
+
+      <section class="about">
+        <div style="max-width: 800px; margin: 0 auto; padding: 20px; text-align: center; background-color: #f9f9f9; border-radius: 10px; box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);">
+          <h2 style="color: #007bff; font-size: 2.5em; font-weight: bold; text-transform: uppercase; margin-bottom: 20px;">
+            Welcome
+          </h2>
+          <p style="color: #555; font-size: 1.2em; margin: 0 auto; max-width: 700px; line-height: 1.6;">
+            To The App.
+          </p>
+        </div>
+        
+      </section>
+      
+
+      <footer>
+        <p>Copyright &copy; <span id="currentYear"></span>
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms &amp; Conditions</a>
+        </p>
+    </footer>
+    
+    <script>
+        // JavaScript to dynamically insert the current year
+        document.getElementById("currentYear").textContent = new Date().toLocaleDateString('en-US', { year: 'numeric' });
+    </script>
+    
+
+      <form action="/logout" method="get">
+        <button type="submit">Logout</button>
+      </form>
+      <form action="/reset-password" method="get">
+        <button type="submit">Reset Password</button>
+      </form>
+      <% } else { %>
+        <div class="special" style="max-width: 500px; margin: 50px auto; padding: 30px; background-color: #f9f9f9; border-radius: 10px; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1); text-align: center;">
+          <h1 style="font-size: 2em; color: #333; margin-bottom: 20px;">Log In To Your Account</h1>
+        
+          <p class="message" style="color: #555; font-size: 1.1em; margin-bottom: 20px;">
+            <%= message %>
+          </p>
+        
+          <div style="margin-top: 20px;">
+            <button style="background-color: #007bff; color: #fff; padding: 12px 25px; border: none; border-radius: 25px; font-size: 16px; cursor: pointer; margin-right: 10px; text-decoration: none;">
+              <a href="/login" style="color: #fff; text-decoration: none;">Login</a>
+            </button>
+        
+            <button style="background-color: #28a745; color: #fff; padding: 12px 25px; border: none; border-radius: 25px; font-size: 16px; cursor: pointer;">
+              <a href="/signup" style="color: #fff; text-decoration: none;">Sign up</a>
+            </button>
+          </div>
+        </div>
+        
+        <% } %>
+  </div>
+</body>
+
+</html>

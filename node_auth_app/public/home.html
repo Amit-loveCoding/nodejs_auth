@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Home Page</title>
+  <style>
+   /* Global Styles */
+body {
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f6f9;
+    color: #333;
+}
+
+/* Header Styling */
+header {
+    background-color: #1e3a8a; /* Deep Blue */
+    color: #fff;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    margin: 0;
+    font-size: 2.5rem;
+    text-align: center;
+    padding-top: 40px;
+    color: #f1f5f9; /* Lighter Grey */
+}
+
+/* Navigation Bar */
+nav {
+    background-color: #3b82f6; /* Bright Blue */
+    color: #fff;
+    display: flex;
+    justify-content: space-around;
+    padding: 15px 10px;
+    font-size: 1.1rem;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+nav a {
+    color: #f1f5f9;
+    text-decoration: none;
+    padding: 10px 15px;
+    transition: color 0.3s ease, background-color 0.3s ease;
+}
+
+nav a:hover {
+    color: #1e3a8a;
+    background-color: #f1f5f9;
+    border-radius: 5px;
+}
+
+/* Section Styles */
+section {
+    margin: 50px 0;
+    padding: 30px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+section h2 {
+    margin: 0;
+    font-size: 2rem;
+    text-align: center;
+    color: #1e3a8a; /* Deep Blue */
+}
+
+section p {
+    margin: 20px 0;
+    line-height: 1.7;
+    color: #4b5563; /* Neutral Darker Gray */
+    font-size: 1.1rem;
+}
+
+/* Footer Styling */
+footer {
+    background-color: #1e3a8a; /* Deep Blue */
+    color: #f1f5f9; /* Light Grey */
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.1);
+}
+
+footer a {
+    color: #93c5fd; /* Light Blue */
+    text-decoration: none;
+    margin-left: 15px;
+    font-weight: bold;
+    transition: color 0.3s ease;
+}
+
+footer a:hover {
+    color: #f1f5f9;
+}
+
+/* Media Queries */
+@media screen and (max-width: 768px) {
+    h1 {
+        font-size: 2rem;
+    }
+
+    section h2 {
+        font-size: 1.5rem;
+    }
+
+    section p {
+        font-size: 1rem;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    h1 {
+        font-size: 1.8rem;
+    }
+
+    nav {
+        font-size: 0.9rem;
+    }
+
+    section h2 {
+        font-size: 1.2rem;
+    }
+
+    section p {
+        font-size: 0.95rem;
+    }
+}
+
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Welcome to our Website</h1>
+  </header>
+  <nav>
+    <a href="home.html">Home</a>
+    <a href="about.html">About</a>
+    <a href="contact.html">Contact</a>
+  </nav>
+  <section>
+    <h2>About Us</h2>
+    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed vitae augue ligula. Nulla vestibulum, sapien ut
+      laoreet gravida, arcu magna varius purus, eu feugiat lorem augue in sapien. Curabitur porta quam enim, ut
+      scelerisque justo sodales at. Nunc a felis velit. Curabitur ac libero euismod, feugiat lectus vel, venenatis
+      justo. Suspendisse potenti. Sed tincidunt arcu eget orci pellentesque aliquet. Nulla facilisi. Nullam eget
+      faucibus tortor. In hac habitasse platea dictumst. Nam vitae massa sit amet libero vehicula auctor id vel lacus.
+      Duis tempor leo quis turpis rhoncus, ut lobortis libero finibus.</p>
+  </section>
+  <footer>
+    <p>&copy; <span id="currentYear"></span> Our Website. All rights reserved.</p>
+</footer>
+
+<script>
+    document.getElementById("currentYear").textContent = new Date().toLocaleDateString(undefined, { year: 'numeric' });
+</script>
+
+</body>
+
+</html>
