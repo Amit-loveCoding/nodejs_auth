@@ -1,16 +1,17 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const session = require('express-session');
 const flash = require('connect-flash');
 const bcrypt = require('bcrypt');
 const path = require('path');
-const passport = require('passport');
 const nodemailer = require('nodemailer');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const crypto = require('crypto');
+
+// MongoDB URL
+const url = process.env.DB_URL;
 
 const app = express();
-// const User = require('./User/user');
-
 
 // Define user schema and model
 const UserSchema = new mongoose.Schema({
@@ -27,33 +28,25 @@ const UserSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    confirmpassword: {
-        type: String,
-        required: true,
-        validate: {
-            validator: function (value) {
-                return this.password === value;
-            },
-            message: 'Password Do not match'
-        }
-    }
+    resetPasswordToken: String,
+    resetPasswordExpires: Date
 });
 
 const User = mongoose.model('User', UserSchema);
 
-// module.exports = User;
+mongoose.set('strictQuery', true); // Configure strictQuery option
+
 // Connect to MongoDB
-mongoose.connect('mongodb://0.0.0.0:27017/nodeauthapp', {
+mongoose.connect(url, {
     useNewUrlParser: true,
     useUnifiedTopology: true
-});
-
-
+})
+.then(() => console.log('MongoDB connected successfully'))
+.catch((err) => console.error('MongoDB connection error:', err));
 
 // Configure app
 app.use(express.static(path.join(__dirname, 'public')));
 app.set('view engine', 'ejs');
-
 app.use(express.urlencoded({ extended: false }));
 app.use(session({
     secret: 'secret',
@@ -61,6 +54,15 @@ app.use(session({
     saveUninitialized: true
 }));
 app.use(flash());
+
+// Configure Nodemailer
+const transporter = nodemailer.createTransport({
+    service: 'Gmail', // Adjust as needed
+    auth: {
+        user: process.env.EMAIL_USER, // Your email address
+        pass: process.env.EMAIL_PASS  // Your email password
+    }
+});
 
 // Define routes
 app.get('/', (req, res) => {
@@ -74,60 +76,86 @@ app.get('/login', (req, res) => {
     res.render('login', { message });
 });
 
-
-
 app.post('/login', (req, res) => {
     const { email, password } = req.body;
+    
     User.findOne({ email }, (err, user) => {
         if (err) {
+            console.error('Error during user lookup:', err);
             req.flash('message', 'An error occurred');
-            res.redirect('/login');
-        } else if (!user) {
-            req.flash('message', 'Email or password is incorrect');
-            res.redirect('/login');
-        } else {
-            bcrypt.compare(password, user.password, (err, result) => {
-                if (result) {
-                    req.session.user = user;
-                    res.render('index', { user, message: req.flash('message') });
-                } else {
-                    req.flash('message', 'Email or password is incorrect');
-                    res.redirect('/login');
-                }
-            });
+            return res.redirect('/login');
         }
+        if (!user) {
+            console.log('User not found:', email);
+            req.flash('message', 'Email or password is incorrect');
+            return res.redirect('/login');
+        }
+        
+        console.log('User found:', user);
+        console.log('Hashed password in DB:', user.password);
+        
+        bcrypt.compare(password, user.password, (err, result) => {
+            if (err) {
+                console.error('Error during password comparison:', err);
+                req.flash('message', 'An error occurred');
+                return res.redirect('/login');
+            }
+            
+            if (result) {
+                console.log('Password matched!');
+                req.session.user = user;
+                return res.redirect('/');
+            } else {
+                console.log('Password did not match');
+                req.flash('message', 'Email or password is incorrect');
+                return res.redirect('/login');
+            }
+        });
     });
 });
 
-app.get('/reset-password', (req, res) => {
+app.get('/reset-password/:token', (req, res) => {
     const { token } = req.params;
-    // TODO: Validate the token and render the reset password form
-    res.render('reset-password', { token, message: req.flash('message') });
+    User.findOne({ resetPasswordToken: token, resetPasswordExpires: { $gt: Date.now() } }, (err, user) => {
+        if (!user) {
+            req.flash('message', 'Password reset token is invalid or has expired');
+            return res.redirect('/forgot-password');
+        }
+        res.render('reset-password', { token, message: req.flash('message') });
+    });
 });
 
-app.post('/reset-password', (req, res) => {
+app.post('/reset-password/:token', (req, res) => {
     const { token } = req.params;
     const { password, confirmPassword } = req.body;
-    // TODO: Validate the password and confirm password fields
     if (password !== confirmPassword) {
         req.flash('message', 'Passwords do not match');
-        res.redirect(`/reset-password/${token}`);
-        return;
+        return res.redirect(`/reset-password/${token}`);
     }
-    User.findOneAndUpdate(
-        { resetPasswordToken: token },
-        { $set: { password: bcrypt.hashSync(password, 10), resetPasswordToken: null } },
-        { new: true },
-        (err, user) => {
-            if (err) {
-                req.flash('message', 'An error occurred while resetting your password');
-                res.redirect(`/reset-password/${token}`);
-            } else {
-                req.flash('message', 'Your password has been reset successfully');
-                res.redirect('/login');
-            }
+    User.findOne({ resetPasswordToken: token, resetPasswordExpires: { $gt: Date.now() } }, (err, user) => {
+        if (!user) {
+            req.flash('message', 'Password reset token is invalid or has expired');
+            return res.redirect('/forgot-password');
         }
-    );
+        bcrypt.hash(password, 10, (err, hash) => {
+            if (err) {
+                req.flash('message', 'An error occurred');
+                return res.redirect('/signup');
+            }
+            user.password = hash;
+            user.resetPasswordToken = undefined;
+            user.resetPasswordExpires = undefined;
+            user.save()
+                .then(() => {
+                    req.session.user = user;
+                    res.redirect('/');
+                })
+                .catch(err => {
+                    req.flash('message', 'An error occurred');
+                    res.redirect('/signup');
+                });
+        });
+    });
 });
 
 app.get('/forgot-password', (req, res) => {
@@ -140,20 +168,37 @@ app.post('/forgot-password', (req, res) => {
     User.findOne({ email }, (err, user) => {
         if (err) {
             req.flash('message', 'An error occurred');
-            res.redirect('/forgot-password');
-        } else if (!user) {
-            req.flash('message', 'No user with that email address found');
-            res.redirect('/forgot-password');
-        } else {
-            // TODO: Send password reset email to user
-            req.flash('message', 'Password reset email sent');
-            res.redirect('/forgot-password');
+            return res.redirect('/forgot-password');
         }
+        if (!user) {
+            req.flash('message', 'No user with that email address found');
+            return res.redirect('/forgot-password');
+        }
+        const resetToken = crypto.randomBytes(20).toString('hex');
+        user.resetPasswordToken = resetToken;
+        user.resetPasswordExpires = Date.now() + 3600000; // 1 hour expiry
+        user.save()
+            .then(() => {
+                const mailOptions = {
+                    to: user.email,
+                    subject: 'Password Reset',
+                    text: `Click here to reset your password: http://localhost:8000/reset-password/${resetToken}`
+                };
+                transporter.sendMail(mailOptions, (error) => {
+                    if (error) {
+                        console.log('Error sending email: ', error);
+                    } else {
+                        req.flash('message', 'Password reset email sent');
+                        res.redirect('/forgot-password');
+                    }
+                });
+            })
+            .catch(err => {
+                req.flash('message', 'An error occurred');
+                res.redirect('/forgot-password');
+            });
     });
 });
-
-
-
 
 app.get('/signup', (req, res) => {
     const message = req.flash('message')[0];
@@ -162,43 +207,43 @@ app.get('/signup', (req, res) => {
 
 app.post('/signup', (req, res) => {
     const { name, email, password, confirmpassword } = req.body;
+    if (password !== confirmpassword) {
+        req.flash('message', 'Passwords do not match');
+        return res.redirect('/signup');
+    }
+    
     User.findOne({ email }, (err, user) => {
         if (err) {
             req.flash('message', 'An error occurred');
-            res.redirect('/signup');
-        } else if (user) {
+            return res.redirect('/signup');
+        }
+        if (user) {
             req.flash('message', 'Email already exists');
-            res.redirect('/signup');
-        } else {
-            bcrypt.hash(password, 10, (err, hash) => {
-                if (err) {
+            return res.redirect('/signup');
+        }
+
+        bcrypt.hash(password, 10, (err, hash) => {
+            if (err) {
+                req.flash('message', 'An error occurred');
+                return res.redirect('/signup');
+            }
+
+            const newUser = new User({
+                name,
+                email,
+                password: hash
+            });
+
+            newUser.save()
+                .then(() => {
+                    req.session.user = newUser;
+                    res.redirect('/');
+                })
+                .catch(err => {
                     req.flash('message', 'An error occurred');
                     res.redirect('/signup');
-                } else {
-                    const user = new User({
-                        name,
-                        email,
-                        password: hash,
-                        confirmpassword: hash
-                    });
-
-                    user.save()
-                        .then(() => {
-                            req.session.user = user;
-                            res.redirect('/');
-                        })
-                        .catch(err => {
-                            if (err.code === 11000) {
-                                req.flash('message', 'Email already exists');
-                                res.redirect('/signup');
-                            } else {
-                                req.flash('message', 'An error occurred');
-                                res.redirect('/signup');
-                            }
-                        });
-                }
-            });
-        }
+                });
+        });
     });
 });
 
@@ -207,10 +252,7 @@ app.get('/logout', (req, res) => {
     res.redirect('/');
 });
 
-app.post('/logout', (req, res) => {
-    res.redirect('/');
-})
-
+// Static pages
 app.get('/home', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'home.html'));
 });
@@ -220,7 +262,6 @@ app.get('/about', (req, res) => {
 app.get('/contact', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'contact.html'));
 });
-
 
 // Start server
 const PORT = process.env.PORT || 8000;
