@@ -116,11 +116,20 @@ app.post('/login', (req, res) => {
 
 app.get('/reset-password/:token', (req, res) => {
     const { token } = req.params;
+    console.log(`Reset password token received: ${token}`);
+
     User.findOne({ resetPasswordToken: token, resetPasswordExpires: { $gt: Date.now() } }, (err, user) => {
+        if (err) {
+            console.error('Error during token lookup:', err);
+            req.flash('message', 'An error occurred');
+            return res.redirect('/forgot-password');
+        }
         if (!user) {
+            console.log('No user found with the provided token or token has expired');
             req.flash('message', 'Password reset token is invalid or has expired');
             return res.redirect('/forgot-password');
         }
+        console.log('User found for password reset:', user.email);
         res.render('reset-password', { token, message: req.flash('message') });
     });
 });
@@ -128,31 +137,49 @@ app.get('/reset-password/:token', (req, res) => {
 app.post('/reset-password/:token', (req, res) => {
     const { token } = req.params;
     const { password, confirmPassword } = req.body;
+
+    console.log(`Reset password request received for token: ${token}`);
+
     if (password !== confirmPassword) {
+        console.log('Passwords do not match');
         req.flash('message', 'Passwords do not match');
         return res.redirect(`/reset-password/${token}`);
     }
+
     User.findOne({ resetPasswordToken: token, resetPasswordExpires: { $gt: Date.now() } }, (err, user) => {
+        if (err) {
+            console.error('Error during token lookup:', err);
+            req.flash('message', 'An error occurred');
+            return res.redirect('/forgot-password');
+        }
         if (!user) {
+            console.log('No user found with the provided token or token has expired');
             req.flash('message', 'Password reset token is invalid or has expired');
             return res.redirect('/forgot-password');
         }
+
+        console.log('User found, proceeding to hash new password');
         bcrypt.hash(password, 10, (err, hash) => {
             if (err) {
-                req.flash('message', 'An error occurred');
-                return res.redirect('/signup');
+                console.error('Error during password hashing:', err);
+                req.flash('message', 'An error occurred during password hashing');
+                return res.redirect(`/reset-password/${token}`);
             }
+
             user.password = hash;
             user.resetPasswordToken = undefined;
             user.resetPasswordExpires = undefined;
+
             user.save()
                 .then(() => {
-                    req.session.user = user;
-                    res.redirect('/');
+                    console.log('Password reset successfully for user:', user.email);
+                    req.flash('message', 'Password reset successfully');
+                    res.redirect('/login');
                 })
                 .catch(err => {
-                    req.flash('message', 'An error occurred');
-                    res.redirect('/signup');
+                    console.error('Error saving new password:', err);
+                    req.flash('message', 'Error saving new password');
+                    res.redirect(`/reset-password/${token}`);
                 });
         });
     });
@@ -182,7 +209,7 @@ app.post('/forgot-password', (req, res) => {
                 const mailOptions = {
                     to: user.email,
                     subject: 'Password Reset',
-                    text: `Click here to reset your password: http://localhost:8000/reset-password/${resetToken}`
+                    text: `Click here to reset your password: http://localhost:${process.env.PORT || 8000}/reset-password/${resetToken}`
                 };
                 transporter.sendMail(mailOptions, (error) => {
                     if (error) {
@@ -263,6 +290,14 @@ app.get('/contact', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'contact.html'));
 });
 
-// Start server
+// Catch-all route for 404 errors
+app.use((req, res) => {
+    console.log('404 Error: Page not found');
+    res.status(404).send('404: Page not found');
+});
+
+// Start the server
 const PORT = process.env.PORT || 8000;
-app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
